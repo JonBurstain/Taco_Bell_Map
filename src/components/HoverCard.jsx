@@ -1,5 +1,6 @@
 import { useState } from 'react';
 import '../styles/HoverCard.css';
+import { WORKER_URL } from '../constants';
 
 function getTodayHours(openingHours) {
   if (!openingHours?.weekday_text) return null;
@@ -32,10 +33,12 @@ export default function HoverCard({ location, details, isLoading, isPinned, onCl
 
   if (!location) return null;
 
-  const photoUrl =
-    details?.photos?.[0]?.getUrl({ maxWidth: 300, maxHeight: 180 }) ?? null;
+  const photoRef = details?.photos?.[0]?.photo_reference ?? null;
+  const photoUrl = photoRef
+    ? `${WORKER_URL}/places/photo?reference=${encodeURIComponent(photoRef)}&maxwidth=300`
+    : null;
 
-  const isOpen = details?.opening_hours?.isOpen?.() ?? null;
+  const isOpen = details?.opening_hours?.open_now ?? null;
   const todayHours = details ? getTodayHours(details.opening_hours) : null;
 
   const rating = details?.rating ?? location.rating ?? null;

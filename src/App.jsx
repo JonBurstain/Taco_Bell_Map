@@ -37,7 +37,7 @@ export default function App() {
     setDetailsLoading(true);
     setDetails(null);
     try {
-      const result = await fetchDetails(placeId, mapRef.current);
+      const result = await fetchDetails(placeId);
       setDetails(result);
     } catch {
       setDetails(null);
@@ -66,7 +66,7 @@ export default function App() {
 
       if (!mapRef.current) throw new Error('Map not ready. Please try again.');
 
-      const raw = await fetchAllTacoBells(lat, lng, mapRef.current);
+      const raw = await fetchAllTacoBells(lat, lng);
 
       if (raw.length === 0) {
         setError('No Taco Bell locations found within 30km of this ZIP code.');

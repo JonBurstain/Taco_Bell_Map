@@ -1,46 +1,27 @@
 import { useCallback, useRef } from 'react';
-
-const DETAIL_FIELDS = [
-  'name',
-  'formatted_address',
-  'rating',
-  'user_ratings_total',
-  'opening_hours',
-  'photos',
-];
+import { WORKER_URL } from '../constants';
 
 /**
- * Returns fetchDetails(placeId, mapInstance).
- * Results are cached in a ref (no re-render on cache write).
+ * Fetch place details via Cloudflare Worker REST proxy.
+ * Results cached in a ref — no mapInstance needed.
  */
 export function usePlaceDetails() {
   const cache = useRef(new Map());
 
-  const fetchDetails = useCallback((placeId, mapInstance) => {
+  const fetchDetails = useCallback(async (placeId) => {
     if (cache.current.has(placeId)) {
-      return Promise.resolve(cache.current.get(placeId));
+      return cache.current.get(placeId);
     }
 
-    return new Promise((resolve, reject) => {
-      if (!window.google || !mapInstance) {
-        reject(new Error('Google Maps not loaded.'));
-        return;
-      }
+    const res = await fetch(`${WORKER_URL}/places/details?place_id=${encodeURIComponent(placeId)}`);
+    const data = await res.json();
 
-      const service = new window.google.maps.places.PlacesService(mapInstance);
+    if (data.error) throw new Error(data.error);
+    if (data.status !== 'OK') throw new Error(`Place details failed: ${data.status}`);
 
-      service.getDetails(
-        { placeId, fields: DETAIL_FIELDS },
-        (result, status) => {
-          if (status === window.google.maps.places.PlacesServiceStatus.OK) {
-            cache.current.set(placeId, result);
-            resolve(result);
-          } else {
-            reject(new Error(`Place details failed: ${status}`));
-          }
-        }
-      );
-    });
+    const result = data.result;
+    cache.current.set(placeId, result);
+    return result;
   }, []);
 
   return { fetchDetails };

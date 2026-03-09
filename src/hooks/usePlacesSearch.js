@@ -1,9 +1,5 @@
 import { useCallback } from 'react';
-import { PAGE_DELAY_MS, MAX_PAGES } from '../constants';
-
-const RADIUS_TIGHT = 8000;  // 8km  — used first for dense cities
-const RADIUS_WIDE  = 30000; // 30km — fallback for suburban/rural areas
-const EXPAND_THRESHOLD = 20; // expand if fewer than this many results
+import { PAGE_DELAY_MS, MAX_PAGES, WORKER_URL, RADIUS_TIGHT, RADIUS_WIDE, EXPAND_THRESHOLD } from '../constants';
 
 function delay(ms) {
   return new Promise((resolve) => setTimeout(resolve, ms));
@@ -13,60 +9,51 @@ function isTacoBell(name) {
   return name?.toLowerCase().includes('taco bell');
 }
 
-function runSearch(service, lat, lng, radius) {
-  return new Promise((resolve, reject) => {
-    const allResults = [];
-    let pageCount = 0;
+async function fetchPage(lat, lng, radius, pagetoken = null) {
+  let url;
+  if (pagetoken) {
+    url = `${WORKER_URL}/places/nearby?pagetoken=${encodeURIComponent(pagetoken)}`;
+  } else {
+    url = `${WORKER_URL}/places/nearby?lat=${lat}&lng=${lng}&radius=${radius}`;
+  }
+  const res = await fetch(url);
+  const data = await res.json();
+  if (data.error) throw new Error(data.error);
+  return data;
+}
 
-    const request = {
-      location: new window.google.maps.LatLng(lat, lng),
-      radius,
-      keyword: 'Taco Bell',
-      type: 'restaurant',
-    };
+async function runSearch(lat, lng, radius) {
+  const allResults = [];
+  let pageCount = 0;
+  let pagetoken = null;
 
-    function handleResults(results, status, pagination) {
-      pageCount++;
-      if (
-        status === window.google.maps.places.PlacesServiceStatus.OK ||
-        status === window.google.maps.places.PlacesServiceStatus.ZERO_RESULTS
-      ) {
-        if (results) allResults.push(...results.filter((r) => isTacoBell(r.name)));
-        if (pagination?.hasNextPage && pageCount < MAX_PAGES) {
-          delay(PAGE_DELAY_MS).then(() => pagination.nextPage());
-        } else {
-          resolve(allResults);
-        }
-      } else {
-        reject(new Error(`Places search failed: ${status}`));
+  do {
+    if (pagetoken) await delay(PAGE_DELAY_MS);
+    const data = await fetchPage(lat, lng, radius, pagetoken);
+
+    if (data.status === 'OK' || data.status === 'ZERO_RESULTS') {
+      if (data.results) {
+        allResults.push(...data.results.filter((r) => isTacoBell(r.name)));
       }
+      pagetoken = data.next_page_token || null;
+      pageCount++;
+    } else {
+      throw new Error(`Places search failed: ${data.status}`);
     }
+  } while (pagetoken && pageCount < MAX_PAGES);
 
-    service.nearbySearch(request, handleResults);
-  });
+  return allResults;
 }
 
 /**
- * Returns fetchAllTacoBells(lat, lng, mapInstance).
- * Searches with a tight 8km radius first. If fewer than EXPAND_THRESHOLD
- * results come back, expands to 30km to cover suburban/rural areas.
+ * Adaptive search: tight radius first, expands if too few results.
+ * Uses REST API via Cloudflare Worker — no mapInstance needed.
  */
 export function usePlacesSearch() {
-  const fetchAllTacoBells = useCallback(async (lat, lng, mapInstance) => {
-    if (!window.google || !mapInstance) {
-      throw new Error('Google Maps not loaded.');
-    }
-
-    const service = new window.google.maps.places.PlacesService(mapInstance);
-
-    const tightResults = await runSearch(service, lat, lng, RADIUS_TIGHT);
-
-    if (tightResults.length >= EXPAND_THRESHOLD) {
-      return tightResults;
-    }
-
-    // Not enough nearby — expand to wide radius
-    return runSearch(service, lat, lng, RADIUS_WIDE);
+  const fetchAllTacoBells = useCallback(async (lat, lng) => {
+    const tightResults = await runSearch(lat, lng, RADIUS_TIGHT);
+    if (tightResults.length >= EXPAND_THRESHOLD) return tightResults;
+    return runSearch(lat, lng, RADIUS_WIDE);
   }, []);
 
   return { fetchAllTacoBells };
