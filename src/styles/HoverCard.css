@@ -1,0 +1,137 @@
+.hover-card {
+  position: absolute;
+  top: 16px;
+  right: 16px;
+  width: 300px;
+  background: #1e1e32;
+  border: 1px solid rgba(255,255,255,0.1);
+  border-radius: 14px;
+  overflow: hidden;
+  box-shadow: 0 8px 32px rgba(0,0,0,0.6), 0 2px 8px rgba(0,0,0,0.4);
+  z-index: 15;
+  pointer-events: none;
+  animation: card-in 0.18s ease-out;
+}
+
+@keyframes card-in {
+  from { opacity: 0; transform: translateY(-6px) scale(0.97); }
+  to   { opacity: 1; transform: translateY(0) scale(1); }
+}
+
+/* Photo section */
+.hc-photo-wrap {
+  position: relative;
+  height: 150px;
+  background: #2a2a45;
+  overflow: hidden;
+}
+
+.hc-photo {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  display: block;
+}
+
+.hc-photo-placeholder {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  height: 100%;
+  font-size: 3.5rem;
+  opacity: 0.35;
+}
+
+.hc-photo-skeleton {
+  width: 100%;
+  height: 100%;
+  background: linear-gradient(90deg, #2a2a45 25%, #3a3a60 50%, #2a2a45 75%);
+  background-size: 200% 100%;
+  animation: shimmer 1.4s infinite;
+}
+
+@keyframes shimmer {
+  0%   { background-position: 200% 0; }
+  100% { background-position: -200% 0; }
+}
+
+.hc-rank-badge {
+  position: absolute;
+  top: 10px;
+  left: 10px;
+  background: #702082;
+  color: #fff;
+  font-weight: 700;
+  font-size: 0.8rem;
+  padding: 2px 8px;
+  border-radius: 20px;
+  letter-spacing: 0.5px;
+  box-shadow: 0 2px 6px rgba(0,0,0,0.4);
+}
+
+/* Body */
+.hc-body {
+  padding: 0.85rem 1rem 1rem;
+}
+
+.hc-name {
+  font-size: 0.95rem;
+  font-weight: 700;
+  color: #fff;
+  margin-bottom: 0.2rem;
+  line-height: 1.3;
+}
+
+.hc-address {
+  font-size: 0.75rem;
+  color: #9ca3af;
+  margin-bottom: 0.6rem;
+  line-height: 1.4;
+}
+
+.hc-rating-row {
+  display: flex;
+  align-items: center;
+  gap: 0.4rem;
+  margin-bottom: 0.5rem;
+  flex-wrap: wrap;
+}
+
+.hc-stars {
+  color: #fbbf24;
+  font-size: 0.95rem;
+  letter-spacing: 1px;
+}
+
+.hc-rating-num {
+  font-weight: 700;
+  font-size: 0.9rem;
+  color: #fff;
+}
+
+.hc-review-count {
+  font-size: 0.78rem;
+  color: #9ca3af;
+}
+
+.hc-open-status {
+  font-size: 0.8rem;
+  font-weight: 600;
+  margin-bottom: 0.2rem;
+}
+
+.hc-open-status.open  { color: #34d399; }
+.hc-open-status.closed { color: #f87171; }
+
+.hc-today-hours {
+  font-size: 0.78rem;
+  color: #9ca3af;
+}
+
+.hc-loading {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  color: #9ca3af;
+  font-size: 0.82rem;
+}
