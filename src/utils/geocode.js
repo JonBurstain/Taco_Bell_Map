@@ -1,36 +1,40 @@
 /**
- * Geocode a US ZIP code to { lat, lng, bounds } using the Geocoding REST API.
+ * Geocode a US ZIP code using the Google Maps JS SDK Geocoder.
+ * Returns { lat, lng, bounds }.
  */
-export async function geocodeZip(zip) {
-  const apiKey = import.meta.env.VITE_GOOGLE_MAPS_API_KEY;
-  const url = `https://maps.googleapis.com/maps/api/geocode/json?address=${encodeURIComponent(zip)}&components=country:US&key=${apiKey}`;
+export function geocodeZip(zip) {
+  return new Promise((resolve, reject) => {
+    if (!window.google) {
+      reject(new Error('Google Maps not loaded.'));
+      return;
+    }
 
-  const res = await fetch(url);
-  if (!res.ok) throw new Error('Network error contacting Geocoding API.');
+    const geocoder = new window.google.maps.Geocoder();
 
-  const data = await res.json();
-
-  if (data.status === 'ZERO_RESULTS' || !data.results?.length) {
-    throw new Error(`No US location found for ZIP code "${zip}". Please try another.`);
-  }
-  if (data.status !== 'OK') {
-    throw new Error(`Geocoding error: ${data.status}`);
-  }
-
-  const result = data.results[0];
-  const { lat, lng } = result.geometry.location;
-  const viewport = result.geometry.viewport;
-
-  return {
-    lat,
-    lng,
-    bounds: viewport
-      ? {
-          north: viewport.northeast.lat,
-          south: viewport.southwest.lat,
-          east: viewport.northeast.lng,
-          west: viewport.southwest.lng,
+    geocoder.geocode(
+      { address: zip, componentRestrictions: { country: 'US' } },
+      (results, status) => {
+        if (status === 'OK' && results?.length) {
+          const { lat, lng } = results[0].geometry.location;
+          const viewport = results[0].geometry.viewport;
+          resolve({
+            lat: lat(),
+            lng: lng(),
+            bounds: viewport
+              ? {
+                  north: viewport.getNorthEast().lat(),
+                  south: viewport.getSouthWest().lat(),
+                  east: viewport.getNorthEast().lng(),
+                  west: viewport.getSouthWest().lng(),
+                }
+              : null,
+          });
+        } else if (status === 'ZERO_RESULTS') {
+          reject(new Error(`No US location found for ZIP code "${zip}". Please try another.`));
+        } else {
+          reject(new Error(`Geocoding error: ${status}`));
         }
-      : null,
-  };
+      }
+    );
+  });
 }

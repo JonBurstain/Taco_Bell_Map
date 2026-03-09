@@ -19,6 +19,8 @@ html, body, #root {
   font-family: 'Segoe UI', system-ui, -apple-system, sans-serif;
   background: var(--bg);
   color: var(--text);
+  /* Prevent text size adjustment on mobile rotation */
+  -webkit-text-size-adjust: 100%;
 }
 
 /* ── Shell ───────────────────────────────────────────────── */
@@ -166,4 +168,29 @@ html, body, #root {
 .loading-subtext {
   font-size: 0.8rem;
   color: var(--muted);
+}
+
+/* ── Mobile ──────────────────────────────────────────────── */
+@media (max-width: 600px) {
+  .app-header {
+    padding: 0.75rem 1rem 1rem;
+  }
+
+  .logo-bell { font-size: 1.4rem; }
+  .logo-text  { font-size: 1.4rem; }
+
+  .app-tagline {
+    font-size: 0.78rem;
+    margin-bottom: 0.75rem;
+  }
+
+  .app-footer {
+    font-size: 0.72rem;
+    padding: 0.5rem 1rem;
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 0.25rem;
+  }
+
+  .legend { gap: 0.5rem; }
 }

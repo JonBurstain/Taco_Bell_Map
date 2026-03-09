@@ -1,4 +1,4 @@
-import { useState, useCallback, useRef } from 'react';
+import { useState, useCallback, useRef, useEffect } from 'react';
 import SearchBar from './components/SearchBar';
 import MapView from './components/MapView';
 import HoverCard from './components/HoverCard';
@@ -11,11 +11,15 @@ import { usePlaceDetails } from './hooks/usePlaceDetails';
 
 export default function App() {
   const [locations, setLocations] = useState([]);
-  const [center, setCenter] = useState({ lat: 39.8283, lng: -98.5795 }); // geographic center of US
+  const [center, setCenter] = useState({ lat: 39.8283, lng: -98.5795 });
   const [zoom, setZoom] = useState(4);
   const [bounds, setBounds] = useState(null);
+
+  // hoveredPlaceId = mouse is over marker (unpinned preview)
+  // pinnedPlaceId  = user clicked a marker (stays open)
   const [hoveredPlaceId, setHoveredPlaceId] = useState(null);
-  const [hoveredDetails, setHoveredDetails] = useState(null);
+  const [pinnedPlaceId, setPinnedPlaceId] = useState(null);
+  const [details, setDetails] = useState(null);
   const [detailsLoading, setDetailsLoading] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState('');
@@ -23,6 +27,24 @@ export default function App() {
   const mapRef = useRef(null);
   const { fetchAllTacoBells } = usePlacesSearch();
   const { fetchDetails } = usePlaceDetails();
+
+  // The active card shows pinned first, then hovered
+  const activeId = pinnedPlaceId ?? hoveredPlaceId;
+  const activeLocation = locations.find((l) => l.place_id === activeId) ?? null;
+
+  const loadDetails = useCallback(async (placeId) => {
+    if (!placeId || !mapRef.current) return;
+    setDetailsLoading(true);
+    setDetails(null);
+    try {
+      const result = await fetchDetails(placeId, mapRef.current);
+      setDetails(result);
+    } catch {
+      setDetails(null);
+    } finally {
+      setDetailsLoading(false);
+    }
+  }, [fetchDetails]);
 
   const handleMapLoad = useCallback((map) => {
     mapRef.current = map;
@@ -33,7 +55,8 @@ export default function App() {
     setIsLoading(true);
     setLocations([]);
     setHoveredPlaceId(null);
-    setHoveredDetails(null);
+    setPinnedPlaceId(null);
+    setDetails(null);
 
     try {
       const { lat, lng, bounds: zipBounds } = await geocodeZip(zip);
@@ -41,15 +64,12 @@ export default function App() {
       setZoom(11);
       setBounds(zipBounds);
 
-      if (!mapRef.current) {
-        throw new Error('Map not ready. Please try again.');
-      }
+      if (!mapRef.current) throw new Error('Map not ready. Please try again.');
 
       const raw = await fetchAllTacoBells(lat, lng, mapRef.current);
 
       if (raw.length === 0) {
         setError('No Taco Bell locations found within 30km of this ZIP code.');
-        setIsLoading(false);
         return;
       }
 
@@ -63,30 +83,40 @@ export default function App() {
     }
   }, [fetchAllTacoBells]);
 
-  const handleMarkerHover = useCallback(async (placeId) => {
+  // Hover: only show preview if nothing is pinned
+  const handleMarkerHover = useCallback((placeId) => {
     setHoveredPlaceId(placeId);
-    setHoveredDetails(null);
-
-    if (!placeId || !mapRef.current) return;
-
-    setDetailsLoading(true);
-    try {
-      const details = await fetchDetails(placeId, mapRef.current);
-      setHoveredDetails(details);
-    } catch {
-      setHoveredDetails(null);
-    } finally {
-      setDetailsLoading(false);
-    }
-  }, [fetchDetails]);
+    if (!pinnedPlaceId) loadDetails(placeId);
+  }, [pinnedPlaceId, loadDetails]);
 
   const handleMarkerOut = useCallback(() => {
     setHoveredPlaceId(null);
-    setHoveredDetails(null);
-    setDetailsLoading(false);
   }, []);
 
-  const hoveredLocation = locations.find((l) => l.place_id === hoveredPlaceId) ?? null;
+  // Click: pin the marker (or switch pinned to a new one)
+  const handleMarkerClick = useCallback((placeId) => {
+    setPinnedPlaceId(placeId);
+    loadDetails(placeId);
+  }, [loadDetails]);
+
+  const handleMapClick = useCallback(() => {
+    setPinnedPlaceId(null);
+    setDetails(null);
+  }, []);
+
+  const handleClose = useCallback(() => {
+    setPinnedPlaceId(null);
+    setDetails(null);
+  }, []);
+
+  // Escape key closes pinned card
+  useEffect(() => {
+    function onKeyDown(e) {
+      if (e.key === 'Escape') handleClose();
+    }
+    window.addEventListener('keydown', onKeyDown);
+    return () => window.removeEventListener('keydown', onKeyDown);
+  }, [handleClose]);
 
   return (
     <div className="app-shell">
@@ -106,17 +136,22 @@ export default function App() {
           zoom={zoom}
           bounds={bounds}
           locations={locations}
-          hoveredPlaceId={hoveredPlaceId}
+          activeId={activeId}
+          pinnedPlaceId={pinnedPlaceId}
           onMapLoad={handleMapLoad}
           onMarkerHover={handleMarkerHover}
           onMarkerOut={handleMarkerOut}
+          onMarkerClick={handleMarkerClick}
+          onMapClick={handleMapClick}
         />
         {isLoading && <LoadingOverlay />}
-        {(hoveredPlaceId) && (
+        {activeId && (
           <HoverCard
-            location={hoveredLocation}
-            details={hoveredDetails}
+            location={activeLocation}
+            details={details}
             isLoading={detailsLoading}
+            isPinned={!!pinnedPlaceId}
+            onClose={handleClose}
           />
         )}
       </main>

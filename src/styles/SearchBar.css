@@ -42,6 +42,8 @@
   letter-spacing: 2px;
   width: 100%;
   padding: 0.65rem 0;
+  /* Prevent iOS zoom on focus */
+  font-size: max(1rem, 16px);
 }
 
 .search-input::placeholder {
@@ -69,8 +71,10 @@
   align-items: center;
   justify-content: center;
   min-width: 110px;
-  min-height: 42px;
+  /* Minimum tap target size for mobile */
+  min-height: 44px;
   white-space: nowrap;
+  touch-action: manipulation;
 }
 
 .search-btn:hover:not(:disabled) {
@@ -103,4 +107,17 @@
   color: #fde68a;
   font-size: 0.8rem;
   margin-top: 0.25rem;
+}
+
+@media (max-width: 600px) {
+  .search-bar {
+    flex-wrap: nowrap;
+    gap: 0.4rem;
+  }
+
+  .search-btn {
+    min-width: 90px;
+    font-size: 0.85rem;
+    padding: 0.65rem 1rem;
+  }
 }

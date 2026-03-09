@@ -13,9 +13,39 @@
   animation: card-in 0.18s ease-out;
 }
 
+.hover-card.pinned {
+  pointer-events: auto;
+  border-color: rgba(112,32,130,0.6);
+  box-shadow: 0 8px 32px rgba(0,0,0,0.6), 0 0 0 1px rgba(112,32,130,0.4);
+}
+
 @keyframes card-in {
   from { opacity: 0; transform: translateY(-6px) scale(0.97); }
   to   { opacity: 1; transform: translateY(0) scale(1); }
+}
+
+/* Close button */
+.hc-close-btn {
+  position: absolute;
+  top: 8px;
+  right: 8px;
+  z-index: 2;
+  background: rgba(0,0,0,0.5);
+  border: none;
+  color: #fff;
+  border-radius: 50%;
+  width: 26px;
+  height: 26px;
+  font-size: 0.75rem;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: background 0.15s;
+}
+
+.hc-close-btn:hover {
+  background: rgba(0,0,0,0.8);
 }
 
 /* Photo section */
@@ -82,11 +112,48 @@
   line-height: 1.3;
 }
 
+.hc-address-row {
+  display: flex;
+  align-items: flex-start;
+  gap: 0.4rem;
+  margin-bottom: 0.6rem;
+}
+
 .hc-address {
   font-size: 0.75rem;
   color: #9ca3af;
-  margin-bottom: 0.6rem;
   line-height: 1.4;
+  flex: 1;
+}
+
+.hc-copy-btn {
+  background: none;
+  border: none;
+  cursor: pointer;
+  font-size: 0.85rem;
+  padding: 0;
+  opacity: 0.5;
+  transition: opacity 0.15s;
+  flex-shrink: 0;
+  line-height: 1;
+  /* Minimum tap target */
+  min-width: 28px;
+  min-height: 28px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  touch-action: manipulation;
+}
+
+.hc-copy-btn:hover {
+  opacity: 1;
+}
+
+.hc-copied {
+  font-size: 0.7rem;
+  font-weight: 700;
+  color: #34d399;
+  white-space: nowrap;
 }
 
 .hc-rating-row {
@@ -134,4 +201,55 @@
   gap: 0.5rem;
   color: #9ca3af;
   font-size: 0.82rem;
+}
+
+/* ── Mobile: card slides up from bottom ──────────────────── */
+@media (max-width: 600px) {
+  .hover-card {
+    position: fixed;
+    top: auto;
+    bottom: 0;
+    right: 0;
+    left: 0;
+    width: 100%;
+    border-radius: 18px 18px 0 0;
+    border-left: none;
+    border-right: none;
+    border-bottom: none;
+    animation: card-in-mobile 0.22s ease-out;
+    max-height: 60vh;
+    overflow-y: auto;
+  }
+
+  .hover-card.pinned {
+    border-top-color: rgba(112,32,130,0.6);
+  }
+
+  @keyframes card-in-mobile {
+    from { transform: translateY(100%); }
+    to   { transform: translateY(0); }
+  }
+
+  .hc-photo-wrap {
+    height: 120px;
+  }
+
+  /* Drag handle visual hint */
+  .hover-card::before {
+    content: '';
+    display: block;
+    width: 36px;
+    height: 4px;
+    background: rgba(255,255,255,0.2);
+    border-radius: 2px;
+    margin: 8px auto 0;
+  }
+
+  .hc-close-btn {
+    top: 12px;
+    right: 12px;
+    width: 32px;
+    height: 32px;
+    font-size: 0.9rem;
+  }
 }

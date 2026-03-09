@@ -1,3 +1,4 @@
+import { useState } from 'react';
 import '../styles/HoverCard.css';
 
 function getTodayHours(openingHours) {
@@ -20,7 +21,15 @@ function RatingStars({ rating }) {
   return <span className="hc-stars">{stars.join('')}</span>;
 }
 
-export default function HoverCard({ location, details, isLoading }) {
+export default function HoverCard({ location, details, isLoading, isPinned, onClose }) {
+  const [copied, setCopied] = useState(false);
+
+  function handleCopy(address) {
+    navigator.clipboard.writeText(address);
+    setCopied(true);
+    setTimeout(() => setCopied(false), 2000);
+  }
+
   if (!location) return null;
 
   const photoUrl =
@@ -35,7 +44,10 @@ export default function HoverCard({ location, details, isLoading }) {
   const address = details?.formatted_address ?? location.vicinity ?? '';
 
   return (
-    <div className="hover-card" role="tooltip">
+    <div className={`hover-card ${isPinned ? 'pinned' : ''}`} role={isPinned ? 'dialog' : 'tooltip'}>
+      {isPinned && (
+        <button className="hc-close-btn" onClick={onClose} aria-label="Close">✕</button>
+      )}
       {/* Photo */}
       <div className="hc-photo-wrap">
         {isLoading ? (
@@ -54,7 +66,18 @@ export default function HoverCard({ location, details, isLoading }) {
       {/* Body */}
       <div className="hc-body">
         <h3 className="hc-name">{name}</h3>
-        {address && <p className="hc-address">{address}</p>}
+        {address && (
+          <div className="hc-address-row">
+            <p className="hc-address">{address}</p>
+            <button
+              className="hc-copy-btn"
+              onClick={() => handleCopy(address)}
+              title="Copy address"
+            >
+              {copied ? <span className="hc-copied">Copied!</span> : '📋'}
+            </button>
+          </div>
+        )}
 
         {isLoading ? (
           <div className="hc-loading">

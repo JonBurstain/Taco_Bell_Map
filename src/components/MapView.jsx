@@ -12,39 +12,23 @@ const MAP_OPTIONS = {
   mapTypeControl: false,
   fullscreenControl: true,
   styles: [
-    {
-      featureType: 'poi.business',
-      stylers: [{ visibility: 'off' }],
-    },
-    {
-      featureType: 'transit',
-      elementType: 'labels.icon',
-      stylers: [{ visibility: 'off' }],
-    },
+    { featureType: 'poi.business', stylers: [{ visibility: 'off' }] },
+    { featureType: 'transit', elementType: 'labels.icon', stylers: [{ visibility: 'off' }] },
   ],
 };
 
 export default function MapView({
-  center,
-  zoom,
-  bounds,
-  locations,
-  hoveredPlaceId,
-  onMapLoad,
-  onMarkerHover,
-  onMarkerOut,
+  center, zoom, bounds, locations,
+  activeId, pinnedPlaceId,
+  onMapLoad, onMarkerHover, onMarkerOut, onMarkerClick, onMapClick,
 }) {
   const mapInstanceRef = useRef(null);
 
-  const handleLoad = useCallback(
-    (map) => {
-      mapInstanceRef.current = map;
-      onMapLoad(map);
-    },
-    [onMapLoad]
-  );
+  const handleLoad = useCallback((map) => {
+    mapInstanceRef.current = map;
+    onMapLoad(map);
+  }, [onMapLoad]);
 
-  // Fit to bounds whenever bounds change
   useEffect(() => {
     if (bounds && mapInstanceRef.current) {
       mapInstanceRef.current.fitBounds({
@@ -64,14 +48,17 @@ export default function MapView({
         zoom={zoom}
         options={MAP_OPTIONS}
         onLoad={handleLoad}
+        onClick={onMapClick}
       >
         {locations.map((loc) => (
           <TacoBellMarker
             key={loc.place_id}
             location={loc}
-            isHovered={loc.place_id === hoveredPlaceId}
+            isActive={loc.place_id === activeId}
+            isPinned={loc.place_id === pinnedPlaceId}
             onMouseOver={onMarkerHover}
             onMouseOut={onMarkerOut}
+            onClick={onMarkerClick}
           />
         ))}
       </GoogleMap>

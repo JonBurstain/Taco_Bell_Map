@@ -1,5 +1,9 @@
 import { useCallback } from 'react';
-import { NEARBY_SEARCH_RADIUS, PAGE_DELAY_MS, MAX_PAGES } from '../constants';
+import { PAGE_DELAY_MS, MAX_PAGES } from '../constants';
+
+const RADIUS_TIGHT = 8000;  // 8km  — used first for dense cities
+const RADIUS_WIDE  = 30000; // 30km — fallback for suburban/rural areas
+const EXPAND_THRESHOLD = 20; // expand if fewer than this many results
 
 function delay(ms) {
   return new Promise((resolve) => setTimeout(resolve, ms));
@@ -9,56 +13,60 @@ function isTacoBell(name) {
   return name?.toLowerCase().includes('taco bell');
 }
 
+function runSearch(service, lat, lng, radius) {
+  return new Promise((resolve, reject) => {
+    const allResults = [];
+    let pageCount = 0;
+
+    const request = {
+      location: new window.google.maps.LatLng(lat, lng),
+      radius,
+      keyword: 'Taco Bell',
+      type: 'restaurant',
+    };
+
+    function handleResults(results, status, pagination) {
+      pageCount++;
+      if (
+        status === window.google.maps.places.PlacesServiceStatus.OK ||
+        status === window.google.maps.places.PlacesServiceStatus.ZERO_RESULTS
+      ) {
+        if (results) allResults.push(...results.filter((r) => isTacoBell(r.name)));
+        if (pagination?.hasNextPage && pageCount < MAX_PAGES) {
+          delay(PAGE_DELAY_MS).then(() => pagination.nextPage());
+        } else {
+          resolve(allResults);
+        }
+      } else {
+        reject(new Error(`Places search failed: ${status}`));
+      }
+    }
+
+    service.nearbySearch(request, handleResults);
+  });
+}
+
 /**
  * Returns fetchAllTacoBells(lat, lng, mapInstance).
- * Paginates up to MAX_PAGES pages with PAGE_DELAY_MS between requests.
+ * Searches with a tight 8km radius first. If fewer than EXPAND_THRESHOLD
+ * results come back, expands to 30km to cover suburban/rural areas.
  */
 export function usePlacesSearch() {
-  const fetchAllTacoBells = useCallback((lat, lng, mapInstance) => {
-    return new Promise((resolve, reject) => {
-      if (!window.google || !mapInstance) {
-        reject(new Error('Google Maps not loaded.'));
-        return;
-      }
+  const fetchAllTacoBells = useCallback(async (lat, lng, mapInstance) => {
+    if (!window.google || !mapInstance) {
+      throw new Error('Google Maps not loaded.');
+    }
 
-      const service = new window.google.maps.places.PlacesService(mapInstance);
-      const allResults = [];
-      let pageCount = 0;
+    const service = new window.google.maps.places.PlacesService(mapInstance);
 
-      const request = {
-        location: new window.google.maps.LatLng(lat, lng),
-        radius: NEARBY_SEARCH_RADIUS,
-        keyword: 'Taco Bell',
-        type: 'restaurant',
-      };
+    const tightResults = await runSearch(service, lat, lng, RADIUS_TIGHT);
 
-      function handleResults(results, status, pagination) {
-        pageCount++;
+    if (tightResults.length >= EXPAND_THRESHOLD) {
+      return tightResults;
+    }
 
-        if (
-          status === window.google.maps.places.PlacesServiceStatus.OK ||
-          status === window.google.maps.places.PlacesServiceStatus.ZERO_RESULTS
-        ) {
-          if (results) {
-            const filtered = results.filter((r) => isTacoBell(r.name));
-            allResults.push(...filtered);
-          }
-
-          if (
-            pagination?.hasNextPage &&
-            pageCount < MAX_PAGES
-          ) {
-            delay(PAGE_DELAY_MS).then(() => pagination.nextPage());
-          } else {
-            resolve(allResults);
-          }
-        } else {
-          reject(new Error(`Places search failed: ${status}`));
-        }
-      }
-
-      service.nearbySearch(request, handleResults);
-    });
+    // Not enough nearby — expand to wide radius
+    return runSearch(service, lat, lng, RADIUS_WIDE);
   }, []);
 
   return { fetchAllTacoBells };
