@@ -1,40 +1,39 @@
+const WORKER_URL = 'https://homebell-proxy.jonburstain.workers.dev';
+
 /**
- * Geocode a US ZIP code using the Google Maps JS SDK Geocoder.
+ * Geocode a US ZIP code via the Cloudflare Worker proxy.
  * Returns { lat, lng, bounds }.
  */
-export function geocodeZip(zip) {
-  return new Promise((resolve, reject) => {
-    if (!window.google) {
-      reject(new Error('Google Maps not loaded.'));
-      return;
-    }
+export async function geocodeZip(zip) {
+  const res = await fetch(`${WORKER_URL}/geocode?zip=${encodeURIComponent(zip)}`);
+  const data = await res.json();
 
-    const geocoder = new window.google.maps.Geocoder();
+  if (data.error) {
+    throw new Error(data.error);
+  }
 
-    geocoder.geocode(
-      { address: zip, componentRestrictions: { country: 'US' } },
-      (results, status) => {
-        if (status === 'OK' && results?.length) {
-          const { lat, lng } = results[0].geometry.location;
-          const viewport = results[0].geometry.viewport;
-          resolve({
-            lat: lat(),
-            lng: lng(),
-            bounds: viewport
-              ? {
-                  north: viewport.getNorthEast().lat(),
-                  south: viewport.getSouthWest().lat(),
-                  east: viewport.getNorthEast().lng(),
-                  west: viewport.getSouthWest().lng(),
-                }
-              : null,
-          });
-        } else if (status === 'ZERO_RESULTS') {
-          reject(new Error(`No US location found for ZIP code "${zip}". Please try another.`));
-        } else {
-          reject(new Error(`Geocoding error: ${status}`));
+  if (data.status === 'ZERO_RESULTS' || !data.results?.length) {
+    throw new Error(`No US location found for ZIP code "${zip}". Please try another.`);
+  }
+
+  if (data.status !== 'OK') {
+    throw new Error(`Geocoding error: ${data.status}`);
+  }
+
+  const result = data.results[0];
+  const { lat, lng } = result.geometry.location;
+  const viewport = result.geometry.viewport;
+
+  return {
+    lat,
+    lng,
+    bounds: viewport
+      ? {
+          north: viewport.northeast.lat,
+          south: viewport.southwest.lat,
+          east: viewport.northeast.lng,
+          west: viewport.southwest.lng,
         }
-      }
-    );
-  });
+      : null,
+  };
 }
